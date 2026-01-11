@@ -54,13 +54,36 @@ export const getEvents = async (req, res) => {
     const finalTotalPages = Math.max(1, totalPages);
 
     // Fetch events with pagination
+    // Sort: upcoming events first (by date ascending), then past events (by date descending)
+    const now = new Date();
+    
+    // Fetch events sorted by date ascending (past events first, then upcoming)
     const events = await Event.find(query)
       .sort({ date: 1 })
       .skip(skip)
       .limit(limitNum)
       .lean();
+    
+    // Sort events: upcoming first (ascending), past last (descending within past)
+    const sortedEvents = events.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      const isAUpcoming = dateA >= now;
+      const isBUpcoming = dateB >= now;
+      
+      // Upcoming events: sort ascending (soonest first)
+      if (isAUpcoming && isBUpcoming) {
+        return dateA - dateB;
+      }
+      // Past events: sort descending (most recent first)
+      if (!isAUpcoming && !isBUpcoming) {
+        return dateB - dateA;
+      }
+      // Upcoming always before past
+      return isAUpcoming ? -1 : 1;
+    });
 
-    const formattedEvents = events.map(event => ({
+    const formattedEvents = sortedEvents.map(event => ({
       ...event,
       _id: event._id.toString(),
       date: event.date.toISOString(),
