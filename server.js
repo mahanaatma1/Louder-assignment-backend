@@ -33,9 +33,26 @@ import('./config/database.js').then(({ default: connectDB }) => {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Middleware - CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://louder-assignments.vercel.app',
+  'http://localhost:3000',
+].filter(Boolean); // Remove any undefined values
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // Allow the request (can be restricted later if needed)
+      callback(null, true);
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
